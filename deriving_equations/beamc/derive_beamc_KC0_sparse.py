@@ -9,7 +9,7 @@ r"""
    |
    ______   --> x axis
    1    2
-   Assumed 2D plane for all derivations
+   Reference 2D plane for all derivations
 
    Timoshenko 3D beam element with consistent shape functions from:
    Luo, Y., 2008, “An Efficient 3D Timoshenko Beam Element with Consistent Shape Functions,” Adv. Theor. Appl. Mech., 1(3), pp. 95–106.
@@ -73,7 +73,7 @@ Nry = Matrix([[0, 0, Gw1, 0, Gry1, 0,
 Nrz = Matrix([[0, Gv1, 0, 0, 0, Grz1,
                0, Gv2, 0, 0, 0, Grz2]])
 
-# u v w  rx  ry  rz  (rows are node 1, node2, node3, node4)
+# u v w  rx  ry  rz  (rows are node 1, node2)
 
 # From Eqs. 8 and 9 in Luo, Y. 2008
 # exx = u,x + (-rz,x)*y + (ry,x)*z
