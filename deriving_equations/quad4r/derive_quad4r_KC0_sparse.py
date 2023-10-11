@@ -37,8 +37,6 @@ r4 = x4*R.i + y4*R.j
 rbottom = r1 + (r2 - r1)*(xi + 1)/2.
 rtop = r4 + (r3 - r4)*(xi + 1)/2.
 r = rbottom + (rtop - rbottom)*(eta + 1)/2.
-print(r)
-raise
 xfunc = r.components[R.i]
 yfunc = r.components[R.j]
 
