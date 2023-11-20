@@ -1,5 +1,9 @@
+import numpy as np
+import sympy
+from sympy import simplify, integrate, Matrix, var
+from sympy.vector import CoordSys3D, cross
+
 r"""
-Mass matrix for Quad4 element
 
     4 ____ 3
      /   /
@@ -8,11 +12,6 @@ Mass matrix for Quad4 element
    1    2
 
 """
-import numpy as np
-import sympy
-from sympy import simplify, integrate, Matrix, var
-from sympy.vector import CoordSys3D, cross
-
 
 DOF = 6
 num_nodes = 4

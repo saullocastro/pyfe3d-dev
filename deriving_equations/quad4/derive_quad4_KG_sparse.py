@@ -1,9 +1,10 @@
 """
-Geometric stiffness matrix for Quad4R element
+Geometric stiffness matrix for Quad4 element
 """
 import numpy as np
 import sympy
 from sympy import var, symbols, Matrix, simplify
+
 
 num_nodes = 4
 cpu_count = 6
