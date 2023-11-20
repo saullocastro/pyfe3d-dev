@@ -263,64 +263,6 @@ BLdrilling = Matrix([[N1y/2., -N1x/2., 0, 0, 0, N1,
 
 BL = Matrix([BLexx, BLeyy, BLgxy, BLkxx, BLkyy, BLkxy, BLgyz, BLgxz])
 
-# hourglass control as per Brockman 1987
-# https://onlinelibrary.wiley.com/doi/pdf/10.1002/nme.1620241208
-# Eqs. 16a and 16b
-# adapted to composites replacing
-#     E*h by E1eq*h, with E1eq = 1/(A^(-1)[0,0]) in u direction
-#     E*h by E2eq*h, with E2eq = 1/(A^(-1)[1,1]) in v direction
-#     E*h**3 by E1eq*h**3 in u direction
-#     E*h**3 by E2eq*h**3 in v direction
-var('E1eq, E2eq')
-print('gamma1 = N1xy')
-print('gamma2 = N2xy')
-print('gamma3 = N3xy')
-print('gamma4 = N4xy')
-Eu = 0.10*E1eq*h/(1. + 1./A)
-Ev = 0.10*E2eq*h/(1. + 1./A)
-Erx = 0.10*E2eq*h**3/(1.+ 1./A)
-Ery = 0.10*E1eq*h**3/(1.+ 1./A)
-Ew = (Erx + Ery)/2.
-Erz = 0
-print('Eu =', Eu)
-print('Ev =', Ev)
-print('Ew =', Ew)
-print('Erx =', Erx)
-print('Ery =', Ery)
-print('Erz =', Erz)
-gamma1, gamma2, gamma3, gamma4 = var('gamma1, gamma2, gamma3, gamma4')
-Eu, Ev, Ew, Erx, Ery = var('Eu, Ev, Ew, Erx, Ery')
-Bhourglass = Matrix([[gamma1, 0, 0, 0, 0, 0,
-                      gamma2, 0, 0, 0, 0, 0,
-                      gamma3, 0, 0, 0, 0, 0,
-                      gamma4, 0, 0, 0, 0, 0],
-                     [0, gamma1, 0, 0, 0, 0,
-                      0, gamma2, 0, 0, 0, 0,
-                      0, gamma3, 0, 0, 0, 0,
-                      0, gamma4, 0, 0, 0, 0],
-                     [0, 0, gamma1, 0, 0, 0,
-                      0, 0, gamma2, 0, 0, 0,
-                      0, 0, gamma3, 0, 0, 0,
-                      0, 0, gamma4, 0, 0, 0],
-                     [0, 0, 0, gamma1, 0, 0,
-                      0, 0, 0, gamma2, 0, 0,
-                      0, 0, 0, gamma3, 0, 0,
-                      0, 0, 0, gamma4, 0, 0],
-                     [0, 0, 0, 0, gamma1, 0,
-                      0, 0, 0, 0, gamma2, 0,
-                      0, 0, 0, 0, gamma3, 0,
-                      0, 0, 0, 0, gamma4, 0],
-                     [0, 0, 0, 0, 0, gamma1,
-                      0, 0, 0, 0, 0, gamma2,
-                      0, 0, 0, 0, 0, gamma3,
-                      0, 0, 0, 0, 0, gamma4]])
-Egamma = Matrix([[Eu, 0, 0, 0, 0, 0],
-                 [0, Ev, 0, 0, 0, 0],
-                 [0, 0, Ew, 0, 0, 0],
-                 [0, 0, 0, Erx, 0, 0],
-                 [0, 0, 0, 0, Ery, 0],
-                 [0, 0, 0, 0, 0, Erz]
-                 ])
 
 ABDE = Matrix(
         [[A11, A12, A16, B11, B12, B16,   0,   0],
@@ -338,7 +280,6 @@ var('wij')
 #NOTE reduced integration of stiffness to remove shear locking
 #subs(xi=0, eta=0) in many places above was used
 KC0e = wij*detJ*(BL.T*ABDE*BL
-        + Bhourglass.T*Egamma*Bhourglass
         + alphat*A66/h*BLdrilling.T*BLdrilling)
 
 # KC0 represents the global linear stiffness matrix
