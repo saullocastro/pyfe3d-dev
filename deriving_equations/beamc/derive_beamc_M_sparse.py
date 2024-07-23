@@ -122,17 +122,17 @@ print('finished calculating Me_lump', flush=True)
 Me_lump = simplify(Me_lump)
 print('finished simplifying Me_lump', flush=True)
 
-print('transformation global to local')
+print('transformation local to global')
 var('r11, r12, r13, r21, r22, r23, r31, r32, r33')
-Rglobal2local = Matrix([[r11, r12, r13],
+Rlocal2global = Matrix([[r11, r12, r13],
                         [r21, r22, r23],
                         [r31, r32, r33]])
 R = sympy.zeros(num_nodes*DOF, num_nodes*DOF)
 for i in range(2*num_nodes):
-    R[i*DOF//2:(i+1)*DOF//2, i*DOF//2:(i+1)*DOF//2] += Rglobal2local
+    R[i*DOF//2:(i+1)*DOF//2, i*DOF//2:(i+1)*DOF//2] += Rlocal2global
 
-M_cons = R.T*Me_cons*R
-M_lump = R.T*Me_lump*R
+M_cons = R*Me_cons*R.T
+M_lump = R*Me_lump*R.T
 
 def name_ind(i):
     if i >= 0*DOF and i < 1*DOF:

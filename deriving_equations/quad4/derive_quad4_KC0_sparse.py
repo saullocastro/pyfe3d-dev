@@ -1,5 +1,18 @@
 r"""
-Constitutive stiffness matrix (linear) for Quad4R element
+Constitutive stiffness matrix (linear) for Quad4 element
+
+w, phi_x and phi_y DOFs based on:
+
+    Hugues T.J.R., Taylor R.L., Kanoknukulchai W. "A simple and efficient
+    finite element for plate bending". International Journal of  Numerical
+    Methods in Engineering, Volume 11, 1977.
+
+
+    Reduced integration for bending, and full integration for transverse shear
+    terms.
+
+
+
 
     4 ____ 3
      /   /
@@ -244,16 +257,26 @@ BLkxy = Matrix([[0, 0, 0, -N1x, N1y, 0,
                  0, 0, 0, -N4x, N4y, 0]])
 #gyz = phiy + w,y
 #    = -rx + w,y
-BLgyz = Matrix([[0, 0, N1y, -N1, 0, 0,
-                 0, 0, N2y, -N2, 0, 0,
-                 0, 0, N3y, -N3, 0, 0,
-                 0, 0, N4y, -N4, 0, 0]])
+#    = rot + grad
+BLgyz_rot = Matrix([[0, 0, 0, -N1, 0, 0,
+                     0, 0, 0, -N2, 0, 0,
+                     0, 0, 0, -N3, 0, 0,
+                     0, 0, 0, -N4, 0, 0]])
+BLgyz_grad = Matrix([[0, 0, N1y, 0, 0, 0,
+                      0, 0, N2y, 0, 0, 0,
+                      0, 0, N3y, 0, 0, 0,
+                      0, 0, N4y, 0, 0, 0]])
 #gxz = phix + w,x
 #    = ry + w,x
-BLgxz = Matrix([[0, 0, N1x, 0, N1, 0,
-                 0, 0, N2x, 0, N2, 0,
-                 0, 0, N3x, 0, N3, 0,
-                 0, 0, N4x, 0, N4, 0]])
+#    = rot + grad
+BLgxz_rot = Matrix([[0, 0, 0, 0, N1, 0,
+                     0, 0, 0, 0, N2, 0,
+                     0, 0, 0, 0, N3, 0,
+                     0, 0, 0, 0, N4, 0]])
+BLgxz_grad = Matrix([[0, 0, N1x, 0, 0, 0,
+                      0, 0, N2x, 0, 0, 0,
+                      0, 0, N3x, 0, 0, 0,
+                      0, 0, N4x, 0, 0, 0]])
 # for drilling stiffness
 #   see Eq. 2.20 in F.M. Adam, A.E. Mohamed, A.E. Hassaballa, Degenerated Four Nodes Shell Element with Drilling Degree of Freedom, IOSR J. Eng. 3 (2013) 10–20. www.iosrjen.org (accessed April 20, 2020).
 BLdrilling = Matrix([[N1y/2., -N1x/2., 0, 0, 0, N1,
@@ -261,26 +284,34 @@ BLdrilling = Matrix([[N1y/2., -N1x/2., 0, 0, 0, N1,
                       N3y/2., -N3x/2., 0, 0, 0, N3,
                       N4y/2., -N4x/2., 0, 0, 0, N4]])
 
-BL = Matrix([BLexx, BLeyy, BLgxy, BLkxx, BLkyy, BLkxy, BLgyz, BLgxz])
+ZERO = sympy.zeros(*BLexx.shape)
+BLmembrane = Matrix([BLexx, BLeyy, BLgxy, ZERO, ZERO, ZERO])
+BLbending = Matrix([ZERO, ZERO, ZERO, BLkxx, BLkyy, BLkxy])
+BLtransvshear_grad = Matrix([BLgyz_grad, BLgxz_grad])
+BLtransvshear_rot = Matrix([BLgyz_rot, BLgxz_rot])
 
 
-ABDE = Matrix(
-        [[A11, A12, A16, B11, B12, B16,   0,   0],
-         [A12, A22, A26, B12, B22, B26,   0,   0],
-         [A16, A26, A66, B16, B26, B66,   0,   0],
-         [B11, B12, B16, D11, D12, D16,   0,   0],
-         [B12, B22, B26, D12, D22, D26,   0,   0],
-         [B16, B26, B66, D16, D26, D66,   0,   0],
-         [  0,   0,   0,   0,   0,   0, E44, E45],
-         [  0,   0,   0,   0,   0,   0, E45, E55]])
+ABD = Matrix(
+        [[A11, A12, A16, B11, B12, B16],
+         [A12, A22, A26, B12, B22, B26],
+         [A16, A26, A66, B16, B26, B66],
+         [B11, B12, B16, D11, D12, D16],
+         [B12, B22, B26, D12, D22, D26],
+         [B16, B26, B66, D16, D26, D66]])
+E = Matrix(
+    [[E44, E45],
+     [E45, E55]])
 
 var('wij')
 
 # Constitutive linear stiffness matrix
 #NOTE reduced integration of stiffness to remove shear locking
 #subs(xi=0, eta=0) in many places above was used
-KC0e = wij*detJ*(BL.T*ABDE*BL
-        + alphat*A66/h*BLdrilling.T*BLdrilling)
+KC0e_membrane = wij*detJ*(BLmembrane.T*ABD*BLmembrane)
+KC0e_bending = wij*detJ*(BLbending.T*ABD*BLbending)
+KC0e_transvshear_rot = wij*detJ*(BLtransvshear_rot.T*E*BLtransvshear_rot)
+KC0e_transvshear_grad = wij*detJ*(BLtransvshear_grad.T*E*BLtransvshear_grad)
+KC0e_drilling = wij*detJ*(alphat*A66/h*BLdrilling.T*BLdrilling)
 
 # KC0 represents the global linear stiffness matrix
 # see mapy https://github.com/saullocastro/mapy/blob/master/mapy/model/coords.py#L284
@@ -325,7 +356,40 @@ for i in range(2*num_nodes):
 #NOTE line below to visually check the Rmatrix
 #np.savetxt('Rmatrix.txt', R, fmt='% 3s')
 
-KC0 = R*KC0e*R.T
+def symmetric_matrix_to_variable(m, prefix='KC0e'):
+    nonzero = set()
+    for ind, val in np.ndenumerate(m):
+        if sympy.expand(val) == 0:
+            continue
+        i, j = ind
+        if i > j:
+            continue # NOTE ignoring symmetric part
+        name = prefix + ('%02d%02d' % (i, j))
+        nonzero.add(name)
+        print('%s = %s' % (name, simplify(val)))
+
+    rows = []
+    for i in range(num_nodes*DOF):
+        cols = []
+        for j in range(num_nodes*DOF):
+            if j >= i:
+                name = prefix + ('%02d%02d' % (i, j))
+            else:
+                name = prefix + ('%02d%02d' % (j, i))
+            if name in nonzero:
+                cols.append(var(name))
+            else:
+                cols.append(0)
+        rows.append(cols)
+
+    return Matrix(rows)
+
+
+KC0_membrane = R*KC0e_membrane*R.T
+KC0_bending = R*KC0e_bending*R.T
+KC0_transvshear_rot = R*KC0e_transvshear_rot*R.T
+KC0_transvshear_grad = R*KC0e_transvshear_grad*R.T
+KC0_drilling = R*KC0e_drilling*R.T
 
 def name_ind(i):
     if i >= 0*DOF and i < 1*DOF:
@@ -339,32 +403,41 @@ def name_ind(i):
     else:
         raise
 
-print()
-print()
-print('_______________________________________')
-print()
-print('printing code for sparse implementation')
-print('_______________________________________')
-print()
-print()
 KC0_SPARSE_SIZE = 0
-for ind, val in np.ndenumerate(KC0):
-    if sympy.expand(val) == 0:
-        continue
-    KC0_SPARSE_SIZE += 1
-    i, j = ind
-    si = name_ind(i)
-    sj = name_ind(j)
-    print('        k += 1')
-    print('        KC0r[k] = %d+%s' % (i%DOF, si))
-    print('        KC0c[k] = %d+%s' % (j%DOF, sj))
+def print_matrix(matrix, indicator='KC0_membrane', prefix='KC0'):
+    global KC0_SPARSE_SIZE
+    print()
+    print()
+    print('# _______________________________________')
+    print('#')
+    print('# ' + indicator)
+    print('# _______________________________________')
+    print()
+    print()
+    for ind, val in np.ndenumerate(matrix):
+        if sympy.expand(val) == 0:
+            continue
+        KC0_SPARSE_SIZE += 1
+        i, j = ind
+        si = name_ind(i)
+        sj = name_ind(j)
+        print('                    k += 1')
+        print('                    %sr[k] = %d+%s' % (prefix, i%DOF, si))
+        print('                    %sc[k] = %d+%s' % (prefix, j%DOF, sj))
+    print()
+    print()
+    for ind, val in np.ndenumerate(matrix):
+        if sympy.expand(val) == 0:
+            continue
+        print('                    k += 1')
+        print('                    %sv[k] +=' % prefix, val)
+    print()
+    print()
+
 print('KC0_SPARSE_SIZE', KC0_SPARSE_SIZE)
-print()
-print()
-for ind, val in np.ndenumerate(KC0):
-    if sympy.expand(val) == 0:
-        continue
-    print('        k += 1')
-    print('        KC0v[k] +=', val)
-print()
-print()
+
+print_matrix(KC0_membrane, 'KC0_membrane', 'KC0')
+print_matrix(KC0_bending, 'KC0_bending', 'KC0')
+print_matrix(KC0_transvshear_rot, 'KC0_transvshear_rot', 'KC0')
+print_matrix(KC0_transvshear_grad, 'KC0_transvshear_grad', 'KC0')
+print_matrix(KC0_drilling, 'KC0_drilling', 'KC0')

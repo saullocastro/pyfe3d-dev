@@ -43,16 +43,16 @@ CAe = -wij*detJ*(Nw.T*Nw)
 
 # KA_beta represents the global aerodynamic matrix using the piston theory
 var('r11, r12, r13, r21, r22, r23, r31, r32, r33')
-Rglobal2local = Matrix([[r11, r12, r13],
+Rlocal2global = Matrix([[r11, r12, r13],
                         [r21, r22, r23],
                         [r31, r32, r33]])
 R = sympy.zeros(num_nodes*DOF, num_nodes*DOF)
 for i in range(2*num_nodes):
-    R[i*DOF//2:(i+1)*DOF//2, i*DOF//2:(i+1)*DOF//2] += Rglobal2local
+    R[i*DOF//2:(i+1)*DOF//2, i*DOF//2:(i+1)*DOF//2] += Rlocal2global
 
-KA_beta = R.T*KAe_beta*R
-KA_gamma = R.T*KAe_gamma*R
-CA = R.T*CAe*R
+KA_beta = R*KAe_beta*R.T
+KA_gamma = R*KAe_gamma*R.T
+CA = R*CAe*R.T
 
 def name_ind(i):
     if i >= 0*DOF and i < 1*DOF:

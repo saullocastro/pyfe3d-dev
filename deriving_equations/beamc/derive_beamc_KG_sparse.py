@@ -141,16 +141,16 @@ Gmatrix = Nvx + Nwx
 
 KGe = simplify(integrate((Gmatrix.T*Gmatrix)*N, (x, 0, L)))
 
-print('transformation global to local')
+print('transformation local to global')
 var('r11, r12, r13, r21, r22, r23, r31, r32, r33')
-Rglobal2local = Matrix([[r11, r12, r13],
+Rlocal2global = Matrix([[r11, r12, r13],
                         [r21, r22, r23],
                         [r31, r32, r33]])
 R = sympy.zeros(num_nodes*DOF, num_nodes*DOF)
 for i in range(2*num_nodes):
-    R[i*DOF//2:(i+1)*DOF//2, i*DOF//2:(i+1)*DOF//2] += Rglobal2local
+    R[i*DOF//2:(i+1)*DOF//2, i*DOF//2:(i+1)*DOF//2] += Rlocal2global
 
-KG = R.T*KGe*R
+KG = R*KGe*R.T
 
 def name_ind(i):
     if i >= 0*DOF and i < 1*DOF:

@@ -57,19 +57,19 @@ BL = Matrix([
 KC0e = BL.T*D*BL
 KC0e = L/2.*simplify(integrate(KC0e, (xi, -1, +1)))
 
-print('transformation global to local')
+print('transformation local to global')
 var('r11, r12, r13, r21, r22, r23, r31, r32, r33')
-Rglobal2local = Matrix([[r11, r12, r13],
+Rlocal2global = Matrix([[r11, r12, r13],
                         [r21, r22, r23],
                         [r31, r32, r33]])
 R = sympy.zeros(num_nodes*DOF, num_nodes*DOF)
 for i in range(2*num_nodes):
-    R[i*DOF//2:(i+1)*DOF//2, i*DOF//2:(i+1)*DOF//2] += Rglobal2local
+    R[i*DOF//2:(i+1)*DOF//2, i*DOF//2:(i+1)*DOF//2] += Rlocal2global
 
 #NOTE line below to visually check the Rmatrix
 #np.savetxt('Rmatrix.txt', R, fmt='% 3s')
 
-KC0 = R.T*KC0e*R
+KC0 = R*KC0e*R.T
 
 def name_ind(i):
     if i >= 0*DOF and i < 1*DOF:
