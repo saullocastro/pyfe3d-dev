@@ -141,35 +141,16 @@ Gmatrix = Nvx + Nwx
 
 KGe = simplify(integrate((Gmatrix.T*Gmatrix)*N, (x, 0, L)))
 
-# KG represents the global linear stiffness matrix
-# see mapy https://github.com/saullocastro/mapy/blob/master/mapy/model/coords.py#L284
-var('cosa, cosb, cosg, sina, sinb, sing')
-R2local = Matrix([
-           [ cosb*cosg               ,  cosb*sing ,                  -sinb ],
-           [-cosa*sing+cosg*sina*sinb,  cosa*cosg+sina*sinb*sing, cosb*sina],
-           [ sina*sing+cosa*cosg*sinb, -cosg*sina+cosa*sinb*sing, cosa*cosb]])
-R2global = R2local.T
-print()
-print('transformation local to global')
-print('r11 =', R2global[0, 0])
-print('r12 =', R2global[0, 1])
-print('r13 =', R2global[0, 2])
-print('r21 =', R2global[1, 0])
-print('r22 =', R2global[1, 1])
-print('r23 =', R2global[1, 2])
-print('r31 =', R2global[2, 0])
-print('r32 =', R2global[2, 1])
-print('r33 =', R2global[2, 2])
-print()
+print('transformation global to local')
 var('r11, r12, r13, r21, r22, r23, r31, r32, r33')
-R2global = Matrix([[r11, r12, r13],
-                   [r21, r22, r23],
-                   [r31, r32, r33]])
+Rglobal2local = Matrix([[r11, r12, r13],
+                        [r21, r22, r23],
+                        [r31, r32, r33]])
 R = sympy.zeros(num_nodes*DOF, num_nodes*DOF)
 for i in range(2*num_nodes):
-    R[i*DOF//2:(i+1)*DOF//2, i*DOF//2:(i+1)*DOF//2] += R2global
+    R[i*DOF//2:(i+1)*DOF//2, i*DOF//2:(i+1)*DOF//2] += Rglobal2local
 
-KG = R*KGe*R.T
+KG = R.T*KGe*R
 
 def name_ind(i):
     if i >= 0*DOF and i < 1*DOF:

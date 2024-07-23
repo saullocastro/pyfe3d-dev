@@ -123,45 +123,14 @@ BL = Matrix([
 KC0e = BL.T*D*BL
 KC0e = integrate(KC0e, (x, 0, L))
 
-# KC0 represents the global linear stiffness matrix
-# see mapy https://github.com/saullocastro/mapy/blob/master/mapy/model/coords.py#L284
-var('cosa, cosb, cosg, sina, sinb, sing')
-R2local = Matrix([
-           [ cosb*cosg               ,  cosb*sing ,                  -sinb ],
-           [-cosa*sing+cosg*sina*sinb,  cosa*cosg+sina*sinb*sing, cosb*sina],
-           [ sina*sing+cosa*cosg*sinb, -cosg*sina+cosa*sinb*sing, cosa*cosb]])
-print()
 print('transformation global to local')
-print('s11 =', R2local[0, 0])
-print('s12 =', R2local[0, 1])
-print('s13 =', R2local[0, 2])
-print('s21 =', R2local[1, 0])
-print('s22 =', R2local[1, 1])
-print('s23 =', R2local[1, 2])
-print('s31 =', R2local[2, 0])
-print('s32 =', R2local[2, 1])
-print('s33 =', R2local[2, 2])
-print()
-R2global = R2local.T
-print()
-print('transformation local to global')
-print('r11 =', R2global[0, 0])
-print('r12 =', R2global[0, 1])
-print('r13 =', R2global[0, 2])
-print('r21 =', R2global[1, 0])
-print('r22 =', R2global[1, 1])
-print('r23 =', R2global[1, 2])
-print('r31 =', R2global[2, 0])
-print('r32 =', R2global[2, 1])
-print('r33 =', R2global[2, 2])
-print()
 var('r11, r12, r13, r21, r22, r23, r31, r32, r33')
-R2global = Matrix([[r11, r12, r13],
-                   [r21, r22, r23],
-                   [r31, r32, r33]])
+Rglobal2local = Matrix([[r11, r12, r13],
+                        [r21, r22, r23],
+                        [r31, r32, r33]])
 R = sympy.zeros(num_nodes*DOF, num_nodes*DOF)
 for i in range(2*num_nodes):
-    R[i*DOF//2:(i+1)*DOF//2, i*DOF//2:(i+1)*DOF//2] += R2global
+    R[i*DOF//2:(i+1)*DOF//2, i*DOF//2:(i+1)*DOF//2] += Rglobal2local
 
 # NOTE line below to visually check the Rmatrix
 # np.savetxt('Rmatrix.txt', R, fmt='% 3s')
@@ -191,7 +160,7 @@ for i in range(num_nodes*DOF):
             cols.append(0)
     rows.append(cols)
 KC0e = Matrix(rows)
-KC0 = R*KC0e*R.T
+KC0 = R.T*KC0e*R
 
 def name_ind(i):
     if i >= 0*DOF and i < 1*DOF:
