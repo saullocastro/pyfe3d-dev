@@ -71,13 +71,19 @@ yfunc = r.components[R.j]
 # d/dx = d/dxi*dxi/dx + d/deta*deta/dx = [dxi/dx   deta/dx] d/dxi  =  [j11  j12] d/dxi
 # d/dy   d/dxi*dxi/dy + d/deta*deta/dy   [dxi/dy   deta/dy] d/deta =  [j21  j22] d/deta
 #
-J = Matrix([[xfunc.diff(xi),  yfunc.diff(xi)],
-            [xfunc.diff(eta), yfunc.diff(eta)]])
+J11 = xfunc.diff(xi)
+J12 = yfunc.diff(xi)
+J21 = xfunc.diff(eta)
+J22 = yfunc.diff(eta)
+print('J11 =', J11)
+print('J12 =', J12)
+print('J21 =', J21)
+print('J22 =', J22)
+J11, J12, J21, J22 = sympy.var('J11, J12, J21, J22')
+J = Matrix([[J11, J12],
+            [J21, J22]])
 detJ = J.det().simplify()
-detJfunc = detJ
 print('detJ =', detJ.simplify())
-print('xi=0, eta=0')
-print('detJ =', detJ.subs(dict(xi=0, eta=0)).simplify())
 
 j = J.inv()
 j11 = j[0, 0].simplify()
@@ -89,12 +95,6 @@ print('j11 =', j11.simplify())
 print('j12 =', j12.simplify())
 print('j21 =', j21.simplify())
 print('j22 =', j22.simplify())
-
-print('xi=0, eta=0')
-print('j11 =', j11.subs(dict(xi=0, eta=0)).simplify())
-print('j12 =', j12.subs(dict(xi=0, eta=0)).simplify())
-print('j21 =', j21.subs(dict(xi=0, eta=0)).simplify())
-print('j22 =', j22.subs(dict(xi=0, eta=0)).simplify())
 
 j11, j12, j21, j22 = var('j11, j12, j21, j22')
 
@@ -309,87 +309,37 @@ var('wij')
 #subs(xi=0, eta=0) in many places above was used
 KC0e_membrane = wij*detJ*(BLmembrane.T*ABD*BLmembrane)
 KC0e_bending = wij*detJ*(BLbending.T*ABD*BLbending)
+KC0e_coupled = wij*detJ*(BLmembrane.T*ABD*BLbending +
+                         BLbending.T*ABD*BLmembrane)
 KC0e_transvshear_rot = wij*detJ*(BLtransvshear_rot.T*E*BLtransvshear_rot)
 KC0e_transvshear_grad = wij*detJ*(BLtransvshear_grad.T*E*BLtransvshear_grad)
+KC0e_transvshear_coupled = wij*detJ*(BLtransvshear_rot.T*E*BLtransvshear_grad +
+                                     BLtransvshear_grad.T*E*BLtransvshear_rot)
 KC0e_drilling = wij*detJ*(alphat*A66/h*BLdrilling.T*BLdrilling)
 
 # KC0 represents the global linear stiffness matrix
-# see mapy https://github.com/saullocastro/mapy/blob/master/mapy/model/coords.py#L284
-var('cosa, cosb, cosg, sina, sinb, sing')
-R2local = Matrix([
-           [ cosb*cosg               ,  cosb*sing ,                  -sinb ],
-           [-cosa*sing+cosg*sina*sinb,  cosa*cosg+sina*sinb*sing, cosb*sina],
-           [ sina*sing+cosa*cosg*sinb, -cosg*sina+cosa*sinb*sing, cosa*cosb]])
-print()
-print('transformation global to local')
-print('s11 =', R2local[0, 0])
-print('s12 =', R2local[0, 1])
-print('s13 =', R2local[0, 2])
-print('s21 =', R2local[1, 0])
-print('s22 =', R2local[1, 1])
-print('s23 =', R2local[1, 2])
-print('s31 =', R2local[2, 0])
-print('s32 =', R2local[2, 1])
-print('s33 =', R2local[2, 2])
-print()
-R2global = R2local.T
 print()
 print('transformation local to global')
-print('r11 =', R2global[0, 0])
-print('r12 =', R2global[0, 1])
-print('r13 =', R2global[0, 2])
-print('r21 =', R2global[1, 0])
-print('r22 =', R2global[1, 1])
-print('r23 =', R2global[1, 2])
-print('r31 =', R2global[2, 0])
-print('r32 =', R2global[2, 1])
-print('r33 =', R2global[2, 2])
-print()
 var('r11, r12, r13, r21, r22, r23, r31, r32, r33')
-R2global = Matrix([[r11, r12, r13],
-                   [r21, r22, r23],
-                   [r31, r32, r33]])
+Rlocal2global = Matrix([[r11, r12, r13],
+                        [r21, r22, r23],
+                        [r31, r32, r33]])
 R = sympy.zeros(num_nodes*DOF, num_nodes*DOF)
 for i in range(2*num_nodes):
-    R[i*DOF//2:(i+1)*DOF//2, i*DOF//2:(i+1)*DOF//2] += R2global
+    R[i*DOF//2:(i+1)*DOF//2, i*DOF//2:(i+1)*DOF//2] += Rlocal2global
 
 #NOTE line below to visually check the Rmatrix
 #np.savetxt('Rmatrix.txt', R, fmt='% 3s')
 
-def symmetric_matrix_to_variable(m, prefix='KC0e'):
-    nonzero = set()
-    for ind, val in np.ndenumerate(m):
-        if sympy.expand(val) == 0:
-            continue
-        i, j = ind
-        if i > j:
-            continue # NOTE ignoring symmetric part
-        name = prefix + ('%02d%02d' % (i, j))
-        nonzero.add(name)
-        print('%s = %s' % (name, simplify(val)))
-
-    rows = []
-    for i in range(num_nodes*DOF):
-        cols = []
-        for j in range(num_nodes*DOF):
-            if j >= i:
-                name = prefix + ('%02d%02d' % (i, j))
-            else:
-                name = prefix + ('%02d%02d' % (j, i))
-            if name in nonzero:
-                cols.append(var(name))
-            else:
-                cols.append(0)
-        rows.append(cols)
-
-    return Matrix(rows)
-
-
 KC0_membrane = R*KC0e_membrane*R.T
 KC0_bending = R*KC0e_bending*R.T
+KC0_coupled = R*KC0e_coupled*R.T
 KC0_transvshear_rot = R*KC0e_transvshear_rot*R.T
 KC0_transvshear_grad = R*KC0e_transvshear_grad*R.T
+KC0_transvshear_coupled = R*KC0e_transvshear_coupled*R.T
 KC0_drilling = R*KC0e_drilling*R.T
+
+KC0 = KC0_membrane + KC0_bending + KC0_coupled + KC0_transvshear_rot + KC0_transvshear_grad + KC0_transvshear_coupled + KC0_drilling
 
 def name_ind(i):
     if i >= 0*DOF and i < 1*DOF:
@@ -403,41 +353,32 @@ def name_ind(i):
     else:
         raise
 
+print()
+print()
+print('_______________________________________')
+print()
+print('printing code for sparse implementation')
+print('_______________________________________')
+print()
+print()
 KC0_SPARSE_SIZE = 0
-def print_matrix(matrix, indicator='KC0_membrane', prefix='KC0'):
-    global KC0_SPARSE_SIZE
-    print()
-    print()
-    print('# _______________________________________')
-    print('#')
-    print('# ' + indicator)
-    print('# _______________________________________')
-    print()
-    print()
-    for ind, val in np.ndenumerate(matrix):
-        if sympy.expand(val) == 0:
-            continue
-        KC0_SPARSE_SIZE += 1
-        i, j = ind
-        si = name_ind(i)
-        sj = name_ind(j)
-        print('                    k += 1')
-        print('                    %sr[k] = %d+%s' % (prefix, i%DOF, si))
-        print('                    %sc[k] = %d+%s' % (prefix, j%DOF, sj))
-    print()
-    print()
-    for ind, val in np.ndenumerate(matrix):
-        if sympy.expand(val) == 0:
-            continue
-        print('                    k += 1')
-        print('                    %sv[k] +=' % prefix, val)
-    print()
-    print()
-
+for ind, val in np.ndenumerate(KC0):
+    if sympy.expand(val) == 0:
+        continue
+    KC0_SPARSE_SIZE += 1
+    i, j = ind
+    si = name_ind(i)
+    sj = name_ind(j)
+    print('        k += 1')
+    print('        KC0r[k] = %d+%s' % (i%DOF, si))
+    print('        KC0c[k] = %d+%s' % (j%DOF, sj))
 print('KC0_SPARSE_SIZE', KC0_SPARSE_SIZE)
-
-print_matrix(KC0_membrane, 'KC0_membrane', 'KC0')
-print_matrix(KC0_bending, 'KC0_bending', 'KC0')
-print_matrix(KC0_transvshear_rot, 'KC0_transvshear_rot', 'KC0')
-print_matrix(KC0_transvshear_grad, 'KC0_transvshear_grad', 'KC0')
-print_matrix(KC0_drilling, 'KC0_drilling', 'KC0')
+print()
+print()
+for ind, val in np.ndenumerate(KC0):
+    if sympy.expand(val) == 0:
+        continue
+    print('        k += 1')
+    print('        KC0v[k] +=', val)
+print()
+print()
