@@ -19,7 +19,7 @@ NUM_NODES = 4
 
 var('h', positive=True, real=True)
 var('x1, y1, x2, y2, x3, y3, x4, y4', real=True, positive=True)
-var('xi, eta, A, alphat, K6ROT')
+var('xi, eta, A, K6ROT')
 var('A11, A12, A16, A22, A26, A66')
 var('B11, B12, B16, B22, B26, B66')
 var('D11, D12, D16, D22, D26, D66')
@@ -358,6 +358,32 @@ for i in range(2*NUM_NODES):
 
 #NOTE line below to visually check the Rmatrix
 #np.savetxt('Rmatrix.txt', R, fmt='% 3s')
+
+nonzero = set()
+for ind, val in np.ndenumerate(KC0e):
+    if sympy.expand(val) == 0:
+        continue
+    i, j = ind
+    if i > j:
+        continue # NOTE ignoring symmetric part
+    name = 'KC0e%02d%02d' % (i, j)
+    nonzero.add(name)
+    print('%s = %s' % (name, simplify(val)))
+
+rows = []
+for i in range(NUM_NODES*DOF):
+    cols = []
+    for j in range(NUM_NODES*DOF):
+        if j >= i:
+            name = 'KC0e%02d%02d' % (i, j)
+        else:
+            name = 'KC0e%02d%02d' % (j, i)
+        if name in nonzero:
+            cols.append(var(name))
+        else:
+            cols.append(0)
+    rows.append(cols)
+KC0e = Matrix(rows)
 
 KC0 = R*KC0e*R.T
 
