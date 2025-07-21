@@ -1,7 +1,6 @@
 import numpy as np
 import sympy
-from sympy import simplify, integrate, Matrix, var
-from sympy.vector import CoordSys3D, cross
+from sympy import simplify, Matrix, var
 
 r"""
 
@@ -24,12 +23,12 @@ DOF = 6
 num_nodes = 2
 
 var('xi', real=True)
-sympy.var('hy, hz, dy, dz, L, E, Iyy, Izz, Iyz, G, A, Ay, Az, J', real=True, positive=True)
+sympy.var('L, E, Iyy, Izz, Iyz, G, A, Ay, Az, J', real=True)
 
 # definitions of Eqs. 20 and 21 of Luo, Y., 2008
-#NOTE in Luo 2008 Iy represents the area moment of inertia in the plane of y
+# NOTE in Luo 2008 Iy represents the area moment of inertia in the plane of y
 #     or rotating about the z axis. Here we say that Izz = Iy
-#NOTE in Luo 2008 Iz represents the area moment of inertia in the plane of z
+# NOTE in Luo 2008 Iz represents the area moment of inertia in the plane of z
 #     or rotating about the y axis. Here we say that Iyy = Iz
 Iy = Izz
 Iz = Iyy
@@ -87,6 +86,7 @@ D = Matrix([
 #gammay = v,x - theta = v,x - rz
 #gammaz = w,x + psi = w,x + ry
 #kappax = phi,x
+
 # putting in a BL matrix
 BL = Matrix([
     2/L*Nu.diff(xi),
