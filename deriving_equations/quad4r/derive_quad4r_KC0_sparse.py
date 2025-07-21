@@ -15,11 +15,11 @@ from sympy.vector import CoordSys3D, cross
 
 
 DOF = 6
-num_nodes = 4
+NUM_NODES = 4
 
 var('h', positive=True, real=True)
 var('x1, y1, x2, y2, x3, y3, x4, y4', real=True, positive=True)
-var('xi, eta, A, alphat')
+var('xi, eta, A, alphat, K6ROT')
 var('A11, A12, A16, A22, A26, A66')
 var('B11, B12, B16, B22, B26, B66')
 var('D11, D12, D16, D22, D26, D66')
@@ -256,10 +256,10 @@ BLgxz = Matrix([[0, 0, N1x, 0, N1, 0,
                  0, 0, N4x, 0, N4, 0]])
 # for drilling stiffness
 #   see Eq. 2.20 in F.M. Adam, A.E. Mohamed, A.E. Hassaballa, Degenerated Four Nodes Shell Element with Drilling Degree of Freedom, IOSR J. Eng. 3 (2013) 10–20. www.iosrjen.org (accessed April 20, 2020).
-BLdrilling = Matrix([[N1y/2., -N1x/2., 0, 0, 0, N1,
-                      N2y/2., -N2x/2., 0, 0, 0, N2,
-                      N3y/2., -N3x/2., 0, 0, 0, N3,
-                      N4y/2., -N4x/2., 0, 0, 0, N4]])
+#BLdrilling = Matrix([[N1y/2., -N1x/2., 0, 0, 0, N1,
+                      #N2y/2., -N2x/2., 0, 0, 0, N2,
+                      #N3y/2., -N3x/2., 0, 0, 0, N3,
+                      #N4y/2., -N4x/2., 0, 0, 0, N4]])
 
 BL = Matrix([BLexx, BLeyy, BLgxy, BLkxx, BLkyy, BLkxy, BLgyz, BLgxz])
 
@@ -339,7 +339,11 @@ var('wij')
 #subs(xi=0, eta=0) in many places above was used
 KC0e = wij*detJ*(BL.T*ABDE*BL
         + Bhourglass.T*Egamma*Bhourglass
-        + alphat*A66/h*BLdrilling.T*BLdrilling)
+        #+ alphat*A66/h*BLdrilling.T*BLdrilling)
+                 )
+for node_i in range(NUM_NODES):
+    print(node_i*DOF + 5)
+    KC0e[node_i*DOF + 5, node_i*DOF + 5] = K6ROT
 
 # KC0 represents the global linear stiffness matrix
 print()
@@ -348,8 +352,8 @@ var('r11, r12, r13, r21, r22, r23, r31, r32, r33')
 Rlocal2global = Matrix([[r11, r12, r13],
                         [r21, r22, r23],
                         [r31, r32, r33]])
-R = sympy.zeros(num_nodes*DOF, num_nodes*DOF)
-for i in range(2*num_nodes):
+R = sympy.zeros(NUM_NODES*DOF, NUM_NODES*DOF)
+for i in range(2*NUM_NODES):
     R[i*DOF//2:(i+1)*DOF//2, i*DOF//2:(i+1)*DOF//2] += Rlocal2global
 
 #NOTE line below to visually check the Rmatrix
