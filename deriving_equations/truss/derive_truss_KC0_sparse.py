@@ -21,15 +21,10 @@ DOF = 6
 num_nodes = 2
 
 var('xi', real=True)
-sympy.var('hy, hz, dy, dz, L, E, Iyy, Izz, J, G, A', real=True, positive=True)
-Iy = Izz
-Iz = Iyy
+sympy.var('L, E, J, G, A', real=True, positive=True)
 
 N1 = (1-xi)/2
 N2 = (1+xi)/2
-
-N1x = -1/L
-N2x = +1/L
 
 # Degrees-of-freedom illustrated in Fig. 1 of Luo, Y., 2008
 #              u, v, w, phi, psi, theta (for each node)
