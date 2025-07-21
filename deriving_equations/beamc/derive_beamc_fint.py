@@ -1,172 +1,181 @@
-"""
-Internal force vector
-"""
 import numpy as np
 import sympy
-from sympy import var, Matrix, symbols, simplify
+from sympy import simplify, integrate, Matrix, var, symbols
 
-num_nodes = 4
-cpu_count = 6
-DOF = 10
+r"""
 
-var('xi, eta, lex, ley, rho, weight')
-var('R')
-var('Nxx, Nyy, Nxy, Mxx, Myy, Mxy')
-var('A11, A12, A16, A22, A26, A66')
-var('B11, B12, B16, B22, B26, B66')
-var('D11, D12, D16, D22, D26, D66')
+   ^ y axis
+   |
+   |
+   ______   --> x axis
+   1    2
+   Reference 2D plane for all derivations
 
-#ley calculated from nodal positions and radius
+   Timoshenko 3D beam element with consistent shape functions from:
+   Luo, Y., 2008, “An Efficient 3D Timoshenko Beam Element with Consistent Shape Functions,” Adv. Theor. Appl. Mech., 1(3), pp. 95–106.
 
-ONE = sympy.Integer(1)
+"""
 
-# shape functions
-# - from Reference:
-#     OCHOA, O. O.; REDDY, J. N. Finite Element Analysis of Composite Laminates. Dordrecht: Springer, 1992.
-# cubic
-Hi = lambda xii, etai: ONE/16.*(xi + xii)**2*(xi*xii - 2)*(eta+etai)**2*(eta*etai - 2)
-Hxi = lambda xii, etai: -lex/32.*xii*(xi + xii)**2*(xi*xii - 1)*(eta + etai)**2*(eta*etai - 2)
-Hyi = lambda xii, etai: -ley/32.*(xi + xii)**2*(xi*xii - 2)*etai*(eta + etai)**2*(eta*etai - 1)
-Hxyi = lambda xii, etai: lex*ley/64.*xii*(xi + xii)**2*(xi*xii - 1)*etai*(eta + etai)**2*(eta*etai - 1)
+DOF = 6
+num_nodes = 2
 
-# node 1 (-1, -1)
-# node 2 (+1, -1)
-# node 3 (+1, +1)
-# node 4 (-1, +1)
+var('x', real=True)
+var('L, E, Iyy, Izz, Iyz, G, A, Ay, Az, J', real=True)
 
-Nu = sympy.Matrix([[
-   #u, du/dx, du/dy, v, dv/dx, dv/dy, w, dw/dx, dw/dy, d2w/(dxdy)
-    Hi(-1, -1), Hxi(-1, -1), Hyi(-1, -1), 0, 0, 0, 0, 0, 0, 0,
-    Hi(+1, -1), Hxi(+1, -1), Hyi(+1, -1), 0, 0, 0, 0, 0, 0, 0,
-    Hi(+1, +1), Hxi(+1, +1), Hyi(+1, +1), 0, 0, 0, 0, 0, 0, 0,
-    Hi(-1, +1), Hxi(-1, +1), Hyi(-1, +1), 0, 0, 0, 0, 0, 0, 0,
-    ]])
-Nv = sympy.Matrix([[
-   #u, du/dx, du/dy, v, dv/dx, dv/dy, w, dw/dx, dw/dy, d2w/(dxdy)
-    0, 0, 0, Hi(-1, -1), Hxi(-1, -1), Hyi(-1, -1), 0, 0, 0, 0,
-    0, 0, 0, Hi(+1, -1), Hxi(+1, -1), Hyi(+1, -1), 0, 0, 0, 0,
-    0, 0, 0, Hi(+1, +1), Hxi(+1, +1), Hyi(+1, +1), 0, 0, 0, 0,
-    0, 0, 0, Hi(-1, +1), Hxi(-1, +1), Hyi(-1, +1), 0, 0, 0, 0,
-    ]])
-Nw = sympy.Matrix([[
-   #u, du/dx, du/dy, v, dv/dx, dv/dy, w, dw/dx, dw/dy, d2w/(dxdy)
-    0, 0, 0, 0, 0, 0, Hi(-1, -1), Hxi(-1, -1), Hyi(-1, -1), Hxyi(-1, -1),
-    0, 0, 0, 0, 0, 0, Hi(+1, -1), Hxi(+1, -1), Hyi(+1, -1), Hxyi(+1, -1),
-    0, 0, 0, 0, 0, 0, Hi(+1, +1), Hxi(+1, +1), Hyi(+1, +1), Hxyi(+1, +1),
-    0, 0, 0, 0, 0, 0, Hi(-1, +1), Hxi(-1, +1), Hyi(-1, +1), Hxyi(-1, +1),
-    ]])
+# definitions of Eqs. 20 and 21 of Luo, Y., 2008
+xi = x/L
+# NOTE in Luo 2008 Iy represents the area moment of inertia in the plane of y
+#     or rotating about the z axis. Here we say that Izz = Iy
+# NOTE in Luo 2008 Iz represents the area moment of inertia in the plane of z
+#     or rotating about the y axis. Here we say that Iyy = Iz
+Iy = Izz
+Iz = Iyy
+# TODO replace G by G12 and G13, but how to do for the D matrix?
+# alphay = 12*E*Iy/(G*A*L**2)
+# alphaz = 12*E*Iz/(G*A*L**2)
+# betay = 1/(1 - alphay)
+# betaz = 1/(1 - alphaz)
+var('alphay, alphaz, betay, betaz', real=True)
 
-Nu_x = (2/lex)*Nu.diff(xi)
-Nu_y = (2/ley)*Nu.diff(eta)
-Nv_x = (2/lex)*Nv.diff(xi)
-Nv_y = (2/ley)*Nv.diff(eta)
+N1 = 1 - xi
+N2 = xi
+Hv1 = betay*( 2*xi**3 - 3*xi**2 + alphay*xi + 1 - alphay)
+Hv2 = betay*(-2*xi**3 + 3*xi**2 - alphay*xi)
+Hw1 = betaz*( 2*xi**3 - 3*xi**2 + alphaz*xi + 1 - alphaz)
+Hw2 = betaz*(-2*xi**3 + 3*xi**2 - alphaz*xi)
+Hrz1 = Htheta1 = L*betay*(xi**3 + (alphay/2 - 2)*xi**2 + (1 - alphay/2)*xi)
+Hrz2 = Htheta2 = L*betay*(xi**3 - (1 + alphay/2)*xi**2 + (alphay/2)*xi)
+Hry1 = Hpsi1   = -L*betaz*(xi**3 + (alphaz/2 - 2)*xi**2 + (1 - alphaz/2)*xi)
+Hry2 = Hpsi2   = -L*betaz*(xi**3 - (1 + alphaz/2)*xi**2 + (alphaz/2)*xi)
+Gv1 = 6*betay/L*( xi**2 - xi)
+Gv2 = 6*betay/L*(-xi**2 + xi)
+Gw1 = -6*betaz/L*( xi**2 - xi)
+Gw2 = -6*betaz/L*(-xi**2 + xi)
+Grz1 = Gtheta1 = betay*(3*xi**2 + (alphay - 4)*xi + 1 - alphay)
+Grz2 = Gtheta2 = betay*(3*xi**2 - (alphay + 2)*xi)
+Gry1 = Gpsi1   = betaz*(3*xi**2 + (alphaz - 4)*xi + 1 - alphaz)
+Gry2 = Gpsi2   = betaz*(3*xi**2 - (alphaz + 2)*xi)
 
-Bm = Matrix([
-    Nu_x, # epsilon_xx
-    Nv_y + 1/R*Nw, # epsilon_yy
-    Nu_y + Nv_x # gamma_xy
-    ])
-Bms = []
-for i in range(Bm.shape[0]):
-    Bmis = []
-    for j in range(Bm.shape[1]):
-        Bmij = Bm[i, j]
-        if Bmij != 0:
-            Bmis.append(symbols('Bm%d_%02d' % (i+1, j+1)))
-        else:
-            Bmis.append(0)
-    Bms.append(Bmis)
-Bm = sympy.Matrix(Bms)
+# Degrees-of-freedom illustrated in Fig. 1 of Luo, Y., 2008
+#              u, v, w, phi, psi, theta (for each node)
+#              u, v, w, rx, ry, rz
+# interpolation according to Eq. 19 of Luo, Y. 2008
+Nu =  Matrix([[N1, 0, 0, 0, 0, 0,
+               N2, 0, 0, 0, 0, 0]])
+Nv =  Matrix([[0, Hv1, 0, 0, 0, Hrz1,
+               0, Hv2, 0, 0, 0, Hrz2]])
+Nw =  Matrix([[0, 0, Hw1, 0, Hry1, 0,
+               0, 0, Hw2, 0, Hry2, 0]])
+Nrx = Matrix([[0, 0, 0, N1, 0, 0,
+               0, 0, 0, N2, 0, 0]])
+Nry = Matrix([[0, 0, Gw1, 0, Gry1, 0,
+               0, 0, Gw2, 0, Gry2, 0]])
+Nrz = Matrix([[0, Gv1, 0, 0, 0, Grz1,
+               0, Gv2, 0, 0, 0, Grz2]])
 
-Nw_x = (2/lex)*Nw.diff(xi)
-Nw_y = (2/ley)*Nw.diff(eta)
-v = var('v')
-w_x = var('w_x')
-w_y = var('w_y')
-BmL = Matrix([
-    w_x*Nw_x,
-    w_y*Nw_y + 1/R**2*v*Nv - 1/R*v*Nw_y - 1/R*w_y*Nv,
-    w_x*Nw_y + w_y*Nw_x - 1/R*v*Nw_x - 1/R*w_x*Nv
-    ])
-BmLs = []
-for i in range(BmL.shape[0]):
-    BmLis = []
-    for j in range(BmL.shape[1]):
-        BmLij = BmL[i, j]
-        if BmLij != 0:
-            BmLis.append(symbols('BmL%d_%02d' % (i+1, j+1)))
-        else:
-            BmLis.append(0)
-    BmLs.append(BmLis)
-BmL = Matrix(BmLs)
+# u v w  rx  ry  rz  (rows are node 1, node2)
 
-Nphix = -(2/lex)*Nw.diff(xi)
-Nphiy = -(2/ley)*Nw.diff(eta)
-Nphix_x = (2/lex)*Nphix.diff(xi)
-Nphix_y = (2/ley)*Nphix.diff(eta)
-Nphiy_x = (2/lex)*Nphiy.diff(xi)
-Nphiy_y = (2/ley)*Nphiy.diff(eta)
-Bb = sympy.Matrix([
-    Nphix_x,
-    Nphiy_y + 1/R*Nv_y,
-    Nphix_y + Nphiy_x + 1/R*Nv_x
-    ])
-Bbs = []
-for i in range(Bb.shape[0]):
-    Bbis = []
-    for j in range(Bb.shape[1]):
-        Bbij = Bb[i, j]
-        if Bbij != 0:
-            Bbis.append(symbols('Bb%d_%02d' % (i+1, j+1)))
-        else:
-            Bbis.append(0)
-    Bbs.append(Bbis)
-Bb = Matrix(Bbs)
+# From Eqs. 8 and 9 in Luo, Y. 2008
+# exx = u,x + (-rz,x)*y + (ry,x)*z
+# exy = (v.diff(x) - rz*y) - (rx)*z # TODO
+# exz = (w.diff(x) + ry*z) + (rx)*y # TODO
+# BL = Matrix([
+    # Nu.diff(x) + (-Nrz.diff(x))*y + Nry.diff(x)*z,
+    #(Nv.diff(x) - Nrz) - Nrx*z,
+    #(Nw.diff(x) + Nry) + Nrx*y,
+    #])
+# dy = dz = 0
+# BL = integrate(BL, (y, -hy/2+dy, +hy/2+dy))
+# BL = simplify(integrate(BL, (z, -hz/2+dz, +hz/2+dz)))
 
-A = Matrix([
-    [A11, A12, A16],
-    [A12, A22, A26],
-    [A16, A26, A66]])
-B = Matrix([
-    [B11, B12, B16],
-    [B12, B22, B26],
-    [B16, B26, B66]])
+# From Eqs. 12 in Luo, Y. 2008
 D = Matrix([
-    [D11, D12, D16],
-    [D12, D22, D26],
-    [D16, D26, D66]])
+    [ E*A,  E*Ay,  E*Az, 0, 0, 0],
+    [E*Ay,  E*Iy, E*Iyz, 0, 0, 0],
+    [E*Az, E*Iyz,  E*Iz, 0, 0, 0],
+    [   0,     0,     0,   G*A,    0, -G*Az],
+    [   0,     0,     0,     0,  G*A,  G*Ay],
+    [   0,     0,     0, -G*Az, G*Ay,  G*J]])
+# From Eq. 8 in Luo, Y. 2008
+# epsilon = u,x
+# kappay = -theta,x = -rz,x
+# kappaz = psi,x = ry,x
+# gammay = v,x - theta = v,x - rz
+# gammaz = w,x + psi = w,x + ry
+# kappax = phi,x
+# putting in a BL matrix
+# BL = derivative of NL
 
-ue = Matrix([symbols(r'ue[%d]' % i) for i in range(0, Bb.shape[1])])
-N = A*(Bm + BmL)*ue + B*Bb*ue
-M = B*(Bm + BmL)*ue + D*Bb*ue
-print('Nxx =', N[0])
-print('Nyy =', N[1])
-print('Nxy =', N[2])
-print('Mxx =', M[0])
-print('Myy =', M[1])
-print('Mxy =', M[2])
+# EXample of Solid element =
+# exx = u,x + 1/2(u,x*u,x + v,x*v,x + w,x*w,x)
+# exy = u,x + 1/2(v,x*u,y...)
+# eyy = v,y + 1/2(u,y*u,y + v,y*v,y + w,y*w,y)
+# ezz = w,z + 1/2(u,z*u,z + v,z*v,z + w,z*w,z)
 
-N = Matrix([[Nxx, Nyy, Nxy]]).T
-M = Matrix([[Mxx, Myy, Mxy]]).T
+BL = Matrix([
+    Nu.diff(x),
+    -Nrz.diff(x),
+    Nry.diff(x),
+    Nv.diff(x) - Nrz,
+    Nw.diff(x) + Nry,
+    Nrx.diff(x)])
 
-fint_terms = Bm.T*N + BmL.T*N + Bb.T*M
-fint = weight*(lex*ley)/4.*(fint_terms)
+# displacements in global coordinates corresponding to one finite element
+ue = Matrix([symbols(r'ue[%d]' % i) for i in range(0, BL.shape[1])])
+
+finte = BL.T*D*BL*ue
+finte = integrate(finte, (x, 0, L))
+
+print('transformation local to global')
+var('r11, r12, r13, r21, r22, r23, r31, r32, r33')
+Rlocal2global = Matrix([[r11, r12, r13],
+                        [r21, r22, r23],
+                        [r31, r32, r33]])
+R = sympy.zeros(num_nodes*DOF, num_nodes*DOF)
+for i in range(2*num_nodes):
+    R[i*DOF//2:(i+1)*DOF//2, i*DOF//2:(i+1)*DOF//2] += Rlocal2global
+
+nonzero = set()
+for ind, val in np.ndenumerate(finte):
+    if sympy.expand(val) == 0:
+        continue
+    i, j = ind
+    name = 'finte%02d' % (i)
+    nonzero.add(name)
+    print('%s = %s' % (name, simplify(val)))
+
+rows = []
+for i in range(num_nodes*DOF):
+    name = 'finte%02d' % (i)
+    if name in nonzero:
+        rows.append(var(name))
+    else:
+        rows.append(0)
+finte = Matrix(rows)
+fint = R*finte
+
 
 def name_ind(i):
-    if i >=0 and i < DOF:
+    if i >= 0*DOF and i < 1*DOF:
         return 'c1'
-    elif i >= DOF and i < 2*DOF:
+    elif i >= 1*DOF and i < 2*DOF:
         return 'c2'
-    elif i >= 2*DOF and i < 3*DOF:
-        return 'c3'
-    elif i >= 3*DOF and i < 4*DOF:
-        return 'c4'
-    else:
+
         raise
 
-for i, fi in enumerate(fint):
-    if fi == 0:
-        continue
+print()
+print()
+print('_______________________________________')
+print()
+print('printing fint')
+print('_______________________________________')
+print()
+print()
+for ind, val in np.ndenumerate(fint):
+    i, j = ind
     si = name_ind(i)
-    print('fint[%d + %s] +=' % (i%DOF, si), fi)
-
+    if sympy.expand(val) == 0:
+        continue
+    print('            fint[%d+%s] +=' % (i%DOF, si), val)
+print()
+print()
