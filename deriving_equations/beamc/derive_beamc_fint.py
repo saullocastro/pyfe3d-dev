@@ -17,7 +17,7 @@ r"""
 """
 
 DOF = 6
-num_nodes = 2
+NUM_NODES = 2
 
 var('x', real=True)
 var('L, E, Iyy, Izz, Iyz, G, A, Ay, Az, J', real=True)
@@ -131,8 +131,8 @@ var('r11, r12, r13, r21, r22, r23, r31, r32, r33')
 Rlocal2global = Matrix([[r11, r12, r13],
                         [r21, r22, r23],
                         [r31, r32, r33]])
-R = sympy.zeros(num_nodes*DOF, num_nodes*DOF)
-for i in range(2*num_nodes):
+R = sympy.zeros(NUM_NODES*DOF, NUM_NODES*DOF)
+for i in range(2*NUM_NODES):
     R[i*DOF//2:(i+1)*DOF//2, i*DOF//2:(i+1)*DOF//2] += Rlocal2global
 
 nonzero = set()
@@ -145,7 +145,7 @@ for ind, val in np.ndenumerate(finte):
     print('%s = %s' % (name, simplify(val)))
 
 rows = []
-for i in range(num_nodes*DOF):
+for i in range(NUM_NODES*DOF):
     name = 'finte%02d' % (i)
     if name in nonzero:
         rows.append(var(name))
