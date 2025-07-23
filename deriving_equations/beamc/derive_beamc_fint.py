@@ -120,11 +120,39 @@ BL = Matrix([
     Nw.diff(x) + Nry,
     Nrx.diff(x)])
 
-# displacements in global coordinates corresponding to one finite element
-ue = Matrix([symbols(r'ue[%d]' % i) for i in range(0, BL.shape[1])])
+KC0e = BL.T*D*BL
+KC0e = integrate(KC0e, (x, 0, L))
 
-finte = BL.T*D*BL*ue
-finte = integrate(finte, (x, 0, L))
+nonzero = set()
+for ind, val in np.ndenumerate(KC0e):
+    if sympy.expand(val) == 0:
+        continue
+    i, j = ind
+    if i > j:
+        continue # NOTE ignoring symmetric part
+    name = 'KC0e%02d%02d' % (i, j)
+    nonzero.add(name)
+    print('%s = %s' % (name, simplify(val)))
+
+rows = []
+for i in range(NUM_NODES*DOF):
+    cols = []
+    for j in range(NUM_NODES*DOF):
+        if j >= i:
+            name = 'KC0e%02d%02d' % (i, j)
+        else:
+            name = 'KC0e%02d%02d' % (j, i)
+        if name in nonzero:
+            cols.append(var(name))
+        else:
+            cols.append(0)
+    rows.append(cols)
+KC0e = Matrix(rows)
+
+# displacements in global coordinates corresponding to one finite element
+ue = Matrix([symbols(r'ue[%d]' % i) for i in range(0, KC0e.shape[1])])
+
+finte = KC0e*ue
 
 print('transformation local to global')
 var('r11, r12, r13, r21, r22, r23, r31, r32, r33')
@@ -140,13 +168,13 @@ for ind, val in np.ndenumerate(finte):
     if sympy.expand(val) == 0:
         continue
     i, j = ind
-    name = 'finte%02d' % (i)
+    name = 'finte[%d]' % (i)
     nonzero.add(name)
     print('%s = %s' % (name, simplify(val)))
 
 rows = []
 for i in range(NUM_NODES*DOF):
-    name = 'finte%02d' % (i)
+    name = 'finte[%d]' % (i)
     if name in nonzero:
         rows.append(var(name))
     else:
@@ -176,6 +204,6 @@ for ind, val in np.ndenumerate(fint):
     si = name_ind(i)
     if sympy.expand(val) == 0:
         continue
-    print('            fint[%d+%s] +=' % (i%DOF, si), val)
+    print('            fint[%d+self.%s] +=' % (i%DOF, si), val)
 print()
 print()
