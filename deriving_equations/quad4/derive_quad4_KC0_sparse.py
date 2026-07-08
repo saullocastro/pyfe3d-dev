@@ -32,7 +32,7 @@ num_nodes = 4
 
 var('h', positive=True, real=True)
 var('x1, y1, x2, y2, x3, y3, x4, y4', real=True, positive=True)
-var('xi, eta, A, alphat')
+var('xi, eta, A, K6ROT')
 var('A11, A12, A16, A22, A26, A66')
 var('B11, B12, B16, B22, B26, B66')
 var('D11, D12, D16, D22, D26, D66')
@@ -315,7 +315,7 @@ KC0e_transvshear_rot = wij*detJ*(BLtransvshear_rot.T*E*BLtransvshear_rot)
 KC0e_transvshear_grad = wij*detJ*(BLtransvshear_grad.T*E*BLtransvshear_grad)
 KC0e_transvshear_coupled = wij*detJ*(BLtransvshear_rot.T*E*BLtransvshear_grad +
                                      BLtransvshear_grad.T*E*BLtransvshear_rot)
-KC0e_drilling = wij*detJ*(alphat*A66/h*BLdrilling.T*BLdrilling)
+KC0e_drilling = wij*detJ*(K6ROT*(1e-6)*A66*BLdrilling.T*BLdrilling)
 
 # KC0 represents the global linear stiffness matrix
 print()

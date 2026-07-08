@@ -256,10 +256,10 @@ BLgxz = Matrix([[0, 0, N1x, 0, N1, 0,
                  0, 0, N4x, 0, N4, 0]])
 # for drilling stiffness
 #   see Eq. 2.20 in F.M. Adam, A.E. Mohamed, A.E. Hassaballa, Degenerated Four Nodes Shell Element with Drilling Degree of Freedom, IOSR J. Eng. 3 (2013) 10–20. www.iosrjen.org (accessed April 20, 2020).
-#BLdrilling = Matrix([[N1y/2., -N1x/2., 0, 0, 0, N1,
-                      #N2y/2., -N2x/2., 0, 0, 0, N2,
-                      #N3y/2., -N3x/2., 0, 0, 0, N3,
-                      #N4y/2., -N4x/2., 0, 0, 0, N4]])
+BLdrilling = Matrix([[N1y/2., -N1x/2., 0, 0, 0, N1,
+                      N2y/2., -N2x/2., 0, 0, 0, N2,
+                      N3y/2., -N3x/2., 0, 0, 0, N3,
+                      N4y/2., -N4x/2., 0, 0, 0, N4]])
 
 BL = Matrix([BLexx, BLeyy, BLgxy, BLkxx, BLkyy, BLkxy, BLgyz, BLgxz])
 
@@ -339,11 +339,8 @@ var('wij')
 #subs(xi=0, eta=0) in many places above was used
 KC0e = wij*detJ*(BL.T*ABDE*BL
         + Bhourglass.T*Egamma*Bhourglass
-        #+ alphat*A66/h*BLdrilling.T*BLdrilling)
-                 )
-for node_i in range(NUM_NODES):
-    print(node_i*DOF + 5)
-    KC0e[node_i*DOF + 5, node_i*DOF + 5] = K6ROT
+        + K6ROT*(1e-6)*A66*BLdrilling.T*BLdrilling)
+                 
 
 nonzero = set()
 for ind, val in np.ndenumerate(KC0e):
