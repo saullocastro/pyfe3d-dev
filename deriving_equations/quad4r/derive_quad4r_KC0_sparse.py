@@ -335,12 +335,50 @@ ABDE = Matrix(
 var('wij')
 
 # Constitutive linear stiffness matrix
-#NOTE reduced integration of stiffness to remove shear locking
-#subs(xi=0, eta=0) in many places above was used
-KC0e = wij*detJ*(BL.T*ABDE*BL
+
+KC0e_full = wij*detJ*(BL.T*ABDE*BL
         + Bhourglass.T*Egamma*Bhourglass
         + K6ROT*(1e-6)*A66*BLdrilling.T*BLdrilling)
-                 
+
+print()
+print('printing cdef double entries')
+print()
+names = []
+split_points = []
+count = -1
+rows = set()
+rows.add(0)
+nonzero = set()
+for ind, val in np.ndenumerate(KC0e_full):
+    if sympy.expand(val) == 0:
+        continue
+    i, j = ind
+    if i > j:
+        continue # NOTE ignoring symmetric part
+    count += 1
+    name = 'KC0e%02d%02d' % (i, j)
+    nonzero.add(name)
+    names.append(name)
+    if i not in rows:
+        rows.add(i)
+        split_points.append(count)
+
+to_print = np.array_split(names, split_points)
+for group in to_print:
+    print('cdef double %s' % (', '.join(group)))
+
+print()
+
+# NOTE first without drilling and reduced integration
+print()
+print('KC0e terms for REDUCED INTEGRATION')
+print()
+
+#subs(xi=0, eta=0) in many places above was used
+KC0e_partial = wij*detJ*(BL.T*ABDE*BL
+        + Bhourglass.T*Egamma*Bhourglass
+        + 0*K6ROT*(1e-6)*A66*BLdrilling.T*BLdrilling)
+
 # KC0 represents the global linear stiffness matrix
 print()
 print('transformation local to global')
@@ -355,16 +393,35 @@ for i in range(2*NUM_NODES):
 #NOTE line below to visually check the Rmatrix
 #np.savetxt('Rmatrix.txt', R, fmt='% 3s')
 
-nonzero = set()
-for ind, val in np.ndenumerate(KC0e):
+for ind, val in np.ndenumerate(KC0e_partial):
     if sympy.expand(val) == 0:
         continue
     i, j = ind
     if i > j:
         continue # NOTE ignoring symmetric part
     name = 'KC0e%02d%02d' % (i, j)
-    nonzero.add(name)
     print('%s = %s' % (name, simplify(val)))
+
+# NOTE second with drilling and full integration
+
+print()
+print('KC0e terms for FULL integration, drilling only')
+print()
+
+KC0e_drilling = wij*detJ*(0*BL.T*ABDE*BL
+        + 0*Bhourglass.T*Egamma*Bhourglass
+        + K6ROT*(1e-6)*A66*BLdrilling.T*BLdrilling)
+
+for ind, val in np.ndenumerate(KC0e_drilling):
+    if sympy.expand(val) == 0:
+        continue
+    i, j = ind
+    if i > j:
+        continue # NOTE ignoring symmetric part
+    name = 'KC0e%02d%02d' % (i, j)
+    print('%s += %s' % (name, simplify(val)))
+
+# NOTE defining symbols that will be used for KC0e
 
 rows = []
 for i in range(NUM_NODES*DOF):
