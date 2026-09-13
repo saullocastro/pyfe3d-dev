@@ -21,8 +21,6 @@ num_nodes = 2
 
 var('x, xi', real=True)
 sympy.var('hy, hz, dy, dz, L, E, Iyy, Izz, Iyz, J, G, A, Ay, Az', real=True, positive=True)
-# NOTE assuming Ay=Az=0 to have Nmembrane constant
-Ay = Az = 0
 
 # definitions of Eqs. 20 and 21 of Luo, Y., 2008
 xi = x/L
@@ -131,15 +129,22 @@ BL = Matrix([
 ue = Matrix([symbols(r'ue[%d]' % i) for i in range(0, BL.shape[1])])
 Nmembrane = D*BL*ue
 
-N = simplify(Nmembrane[0])
-print('N =', N, flush=True)
-# NOTE for constant properties, N will be constant along x
-N = var('N', real=True)
+# NOTE the axial force N = E*(A*u,x - Ay*rz,x + Az*ry,x) varies linearly
+#      along x when Ay != 0 or Az != 0, because rz,x and ry,x do. It is
+#      therefore represented exactly by its values Na and Nb at both ends
+N = Nmembrane[0]
+assert simplify(N.diff(x, 2)) == 0
+print('Na =', simplify(N.subs(x, 0)), flush=True)
+print('Nb =', simplify(N.subs(x, L)), flush=True)
+Na, Nb = var('Na, Nb', real=True)
+N = Na + (Nb - Na)*x/L
 
-# G is dv/dx + dw/dx
-Gmatrix = Nvx + Nwx
-
-KGe = simplify(integrate((Gmatrix.T*Gmatrix)*N, (x, 0, L)))
+# NOTE v,x and w,x enter the von Karman strain as two separate squares,
+#      exx = u,x + (v,x**2 + w,x**2)/2, so the geometric stiffness is
+#      N*(Nvx.T*Nvx + Nwx.T*Nwx). Using the square of the sum,
+#      N*(Nvx + Nwx).T*(Nvx + Nwx), couples the two bending planes and halves
+#      the buckling load of a column with a square cross section
+KGe = simplify(integrate((Nvx.T*Nvx + Nwx.T*Nwx)*N, (x, 0, L)))
 
 print('transformation local to global')
 var('r11, r12, r13, r21, r22, r23, r31, r32, r33')

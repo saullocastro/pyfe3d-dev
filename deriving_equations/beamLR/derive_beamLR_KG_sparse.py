@@ -66,14 +66,13 @@ Nrz = Matrix([[0, 0, 0, 0, 0, N1,
 #BL = simplify(integrate(BL, (z, -hz/2+dz, +hz/2+dz)))
 
 #From Eqs. 12 in Luo, Y. 2008
-#NOTE forcing Ay=Az=0 to have Nmembrane constant
 # p = D rho
 # p = [N My Mz Qy Qz Mx]
 # p = [e ky kz gammay gammaz kx]
 D = Matrix([
-    [ E*A, E*Ay*0, E*Az*0, 0, 0, 0],
-    [E*Ay*0, E*Iy,  E*Iyz, 0, 0, 0],
-    [E*Az*0,  E*Iyz, E*Iz, 0, 0, 0],
+    [ E*A, E*Ay, E*Az, 0, 0, 0],
+    [E*Ay, E*Iy,  E*Iyz, 0, 0, 0],
+    [E*Az,  E*Iyz, E*Iz, 0, 0, 0],
     [   0,    0,    0,   G*A, 0, -G*Az],
     [   0,    0,    0,  0,  G*A, G*Ay],
     [   0,    0,    0, -G*Az, G*Ay, G*J]])
@@ -107,19 +106,24 @@ ue = Matrix([symbols(r'ue[%d]' % i) for i in range(0, BL.shape[1])])
 Nmembrane = D*BL*ue
 
 N = simplify(Nmembrane[0])
+assert N.diff(xi) == 0
 print('N =', N, flush=True)
-#NOTE for constant properties, N will be constant along x
+#NOTE N = E*(A*u,x - Ay*rz,x + Az*ry,x) is constant along x, because u,x,
+#     rz,x and ry,x are constant for linear shape functions
 N = var('N', real=True)
 
-# G is dv/dx + dw/dx = rz - ry
+# the slopes are taken from the rotations, v,x = rz and w,x = -ry
 #NOTE, I tried Nvx and Nwx here and it does not work, leading to the same KG
 #      obtained for the truss element. Thus, I recommend keeping Nrz and Nry,
 #      which might become more inconsistent when the beam becomes thicker, i.e.
 #      when L/sqrt(A) becomes lower.
+#NOTE the slopes enter the von Karman strain as two separate squares,
+#     exx = u,x + (v,x**2 + w,x**2)/2, so the geometric stiffness is
+#     N*(Nrz.T*Nrz + Nry.T*Nry). Using the square of the sum,
+#     N*(Nrz - Nry).T*(Nrz - Nry), couples the two bending planes and halves
+#     the buckling load of a column with a square cross section
 
-Gmatrix = Nrz - Nry
-
-KGe = L/2.*simplify(integrate((Gmatrix.T*Gmatrix)*N, (xi, -1, +1)))
+KGe = L/2.*simplify(integrate((Nrz.T*Nrz + Nry.T*Nry)*N, (xi, -1, +1)))
 
 print('transformation local to global')
 var('r11, r12, r13, r21, r22, r23, r31, r32, r33')

@@ -82,10 +82,10 @@ print('N =', N, flush=True)
 #NOTE for constant properties, N will be constant along x
 N = var('N', real=True)
 
-# G is dv/dx + dw/dx
-Gmatrix = Nvx + Nwx
-
-KGe = L/2.*simplify(integrate((Gmatrix.T*Gmatrix)*N, (xi, -1, +1)))
+#NOTE v,x and w,x enter the von Karman strain as two separate squares,
+#     exx = u,x + (v,x**2 + w,x**2)/2, so the geometric stiffness is
+#     N*(Nvx.T*Nvx + Nwx.T*Nwx), without coupling between v and w
+KGe = L/2.*simplify(integrate((Nvx.T*Nvx + Nwx.T*Nwx)*N, (xi, -1, +1)))
 
 print('transformation local to global')
 var('r11, r12, r13, r21, r22, r23, r31, r32, r33')
