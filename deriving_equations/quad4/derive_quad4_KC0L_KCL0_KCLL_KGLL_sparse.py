@@ -192,15 +192,25 @@ nonzero = np.array([[expand(KCNLe[i, j]) != 0
 blocks = nonzero.reshape(2*NUM_NODES, 3, 2*NUM_NODES, 3).any(axis=(1, 3))
 nonzero = np.kron(blocks, np.ones((3, 3), dtype=bool))
 
-print('non-zero 3x3 blocks in global coordinates')
-print('(translations and rotations of node 1, then of node 2, ...)')
-print(blocks.astype(int))
-print()
-print('structurally non-zero terms in global coordinates:', nonzero.sum())
-# NOTE update_KCNL in quad4.pyx stores every term of every 6x6 node block,
-#     in the order
-#         k = init_k_KCNL + NUM_NODES*DOF*(node_i*DOF + m) + node_j*DOF + n
-#         KCNLr[k] = c[node_i] + m
-#         KCNLc[k] = c[node_j] + n
-KCNL_SPARSE_SIZE = (NUM_NODES*DOF)**2
+def name_ind(i):
+    node = i//DOF
+    if node >= 0 and node < NUM_NODES:
+        return 'c%d' % (node + 1)
+    else:
+        raise
+
+# NOTE printing only the non-zero terms, such that KCNL_SPARSE_SIZE can be
+#     smaller than the (NUM_NODES*DOF)**2 terms stored by update_KCNL in
+#     quad4.pyx
+KCNL_SPARSE_SIZE = 0
+for ind, val in np.ndenumerate(nonzero):
+    if not val:
+        continue
+    KCNL_SPARSE_SIZE += 1
+    i, j = ind
+    si = name_ind(i)
+    sj = name_ind(j)
+    print('            k += 1')
+    print('            KCNLr[k] = %d+%s' % (i%DOF, si))
+    print('            KCNLc[k] = %d+%s' % (j%DOF, sj))
 print('KCNL_SPARSE_SIZE', KCNL_SPARSE_SIZE)
