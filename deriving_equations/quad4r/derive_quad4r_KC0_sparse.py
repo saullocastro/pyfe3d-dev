@@ -271,16 +271,44 @@ BL = Matrix([BLexx, BLeyy, BLgxy, BLkxx, BLkyy, BLkxy, BLgyz, BLgxz])
 #     E*h by E2eq*h, with E2eq = 1/(A^(-1)[1,1]) in v direction
 #     E*h**3 by E1eq*h**3 in u direction
 #     E*h**3 by E2eq*h**3 in v direction
+#
+# and with Brockman's 1/(1 + 1/A) replaced by the dimensionally homogeneous
+# area factor. The hourglass term enters the element matrix as
+#
+#     K_ij = A*E^(h)*gamma_i*gamma_j
+#
+# with gamma = d2N/dxdy at the centroid, of dimension 1/L**2. The hourglass
+# amplitude of a translation is gamma'u, of dimension 1/L, and of a rotation
+# is gamma'theta, of dimension 1/L**2, so equating A*E^(h)*gamma**2 to a
+# force per unit displacement for the translations and to a moment per unit
+# rotation for the rotations gives
+#
+#     [E^(h)] = F*L    for u, v and w        [E^(h)] = F*L**3   for rx, ry
+#
+# Hence E*h*A for the in-plane translations and E*h**3*A for the rotations.
+# Brockman's 1/(1 + 1/A) tends to A for small areas and to 1 for large ones,
+# so it supplies the missing area only in whatever unit makes A << 1, which
+# is the source of its unit dependence. In the small-area limit the forms
+# below coincide with Eqs. (16a) and (16b), so no benchmark moves.
+#
+# Only four of the five coefficients are changed. E^(h)_w keeps Brockman's
+# factor, because the operator cannot separate the spurious pattern w = x*y
+# from a legitimate twist curvature, both giving gamma'w = d2w/dxdy, so the
+# stabilisation also stiffens real twist and the acceptable amount is a
+# property of the problem: the thin plates want about 2e-4 of E*h**3 and the
+# one-element-wide torsion strip of MacNeal and Harder wants about 2e-2. No
+# dimensionless constant serves both; Brockman's factor does, because it
+# grows with the element area. See the Quad4R module documentation.
 var('E1eq, E2eq')
 print('gamma1 = N1xy')
 print('gamma2 = N2xy')
 print('gamma3 = N3xy')
 print('gamma4 = N4xy')
-Eu = 0.10*E1eq*h/(1. + 1./A)
-Ev = 0.10*E2eq*h/(1. + 1./A)
-Erx = 0.10*E2eq*h**3/(1.+ 1./A)
-Ery = 0.10*E1eq*h**3/(1.+ 1./A)
-Ew = (Erx + Ery)/2.
+Eu = 0.10*E1eq*h*A
+Ev = 0.10*E2eq*h*A
+Erx = 0.10*E2eq*h**3*A
+Ery = 0.10*E1eq*h**3*A
+Ew = 0.10*(E1eq + E2eq)/2.*h**3/(1. + 1./A)
 Erz = 0
 print('Eu =', Eu)
 print('Ev =', Ev)
